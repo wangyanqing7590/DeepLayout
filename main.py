@@ -1,5 +1,6 @@
 import os
 import argparse
+from tabnanny import check
 import torch
 from sdataset import MNISTLayout, JSONLayout, CSVLayout
 from model import GPT, GPTConfig
@@ -11,6 +12,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser('Layout Transformer')
     parser.add_argument("--exp", default="cpu_test", help="experiment name")
     parser.add_argument("--log_dir", default="./logs", help="/path/to/logs/dir")
+    parser.add_argument("--ckpt", default=None, help="path to checkpoint")
 
     # MNIST options
     parser.add_argument("--data_dir", default=None, help="/path/to/mnist/data")
@@ -74,6 +76,10 @@ if __name__ == "__main__":
     mconf = GPTConfig(train_dataset.vocab_size, train_dataset.max_length,
                       n_layer=args.n_layer, n_head=args.n_head, n_embd=args.n_embd)  # a GPT-1
     model = GPT(mconf)
+    if args.ckpt :
+        checkpoint = torch.load(args.ckpt)
+        model = model.load_state_dict(checkpoint)
+        print(f"loaded checkpoint from {args.ckpt}")
     tconf = TrainerConfig(max_epochs=args.epochs,
                           batch_size=args.batch_size,
                           lr_decay=args.lr_decay,
