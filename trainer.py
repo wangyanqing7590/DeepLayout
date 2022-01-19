@@ -142,7 +142,7 @@ class Trainer:
 
         best_loss = float('inf')
         for epoch in range(config.max_epochs):
-            # run_epoch('train')
+            run_epoch('train')
             if self.test_dataset is not None:
                 with torch.no_grad():
                     test_loss = run_epoch('test')
