@@ -78,7 +78,7 @@ if __name__ == "__main__":
     model = GPT(mconf)
     if args.ckpt :
         checkpoint = torch.load(args.ckpt)
-        model = model.load_state_dict(checkpoint)
+        model.load_state_dict(checkpoint)
         print(f"loaded checkpoint from {args.ckpt}")
     tconf = TrainerConfig(max_epochs=args.epochs,
                           batch_size=args.batch_size,
