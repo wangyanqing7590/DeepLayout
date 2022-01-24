@@ -223,6 +223,7 @@ class CSVLayout(Dataset):
         self.max_length = max_length
         if self.max_length is None:
             self.max_length = min(df.groupby('filename').count().xmin.max(),self.max_item)*5 + 2  # bos, eos tokens
+            self.max_length = self.max_item*5 + 2  # bos, eos tokens
         self.transform = Padding(self.max_length, self.vocab_size)
 
     def quantize_box(self, boxes, width, height):
@@ -276,10 +277,11 @@ class CSVLayout(Dataset):
         ann_cat = []
         if len(image) > self.max_item:
             image = image[:self.max_item]
-        for ann in image.values:
-            x, y, w, h = ann[1], ann[2], ann[5], ann[6]
+        for ann in range(len(image)):
+            ann = image.iloc[ann]
+            x, y, w, h = ann['xmin'], ann['ymin'], ann['width'], ann['height']
             ann_box.append([x, y, w, h])
-            ann_cat.append(self.csv_category_to_contiguous_id[ann[0]])
+            ann_cat.append(self.csv_category_to_contiguous_id[ann['category']])
 
         # Sort boxes
         ann_box = np.array(ann_box,dtype=float)
@@ -300,6 +302,6 @@ class CSVLayout(Dataset):
         return layout['x'], layout['y']
 
 if __name__ == '__main__':
-    layout_all = CSVLayout('/Users/wangyanqing/Downloads/data/rico_anno_train.csv')
-    sample_xy = layout_all[1]
-    layout_all.render(np.array(layout_all[1][0])).show()
+    layout_all = CSVLayout('./testfile.csv')
+    sample_xy = layout_all[0]
+    layout_all.render(np.array(layout_all[0][0])).show()
