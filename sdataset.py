@@ -111,7 +111,7 @@ class CSVLayout(Dataset):
                            width=2)
 
             if  0 <= cat-self.size < len(self.colors) :
-                font_path = '/Users/wangyanqing/Desktop/utils/font/Lantinghei.ttc'
+                font_path = 'font/Lantinghei.ttc'
                 font = ImageFont.truetype(font_path, 40)
                 draw.text((x1+5,y1+5),self.contiguous_category_id_to_csv[cat], tuple(col),font)
         # Add border around image
