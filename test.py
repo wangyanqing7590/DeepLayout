@@ -15,7 +15,7 @@ from model import GPT, GPTConfig
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Layout Transformer')
-    parser.add_argument("--ckpt", default=None, help="path to checkpoint")
+    parser.add_argument("--ckpt", default='/Users/wangyanqing/Downloads/checkpoint.pth', help="path to checkpoint")
     parser.add_argument("--dir", default='./outputs', help="path to output")
     parser.add_argument("--train_csv", default="/Users/wangyanqing/Downloads/data/rico_anno_train.csv", help="/path/to/train/csv")
     parser.add_argument("--val_csv", default="./testfile.csv", help="/path/to/val/csv")
@@ -41,7 +41,7 @@ if __name__ == "__main__":
                       n_layer=args.n_layer, n_head=args.n_head, n_embd=args.n_embd)  # a GPT-1
     model = GPT(mconf)
     if args.ckpt :
-        checkpoint = torch.load(args.ckpt)
+        checkpoint = torch.load(args.ckpt, map_location='cpu')
         model.load_state_dict(checkpoint)
         print(f"loaded checkpoint from {args.ckpt}")
 
@@ -75,20 +75,28 @@ if __name__ == "__main__":
 
             # reconstruction
             x_cond = x.to(device)
+            print(x_cond)
             logits, _ = model(x_cond)
             probs = F.softmax(logits, dim=-1)
             _, y = torch.topk(probs, k=1, dim=-1)
             layouts = torch.cat((x_cond[:, :1], y[:, :, 0]), dim=1).detach().cpu().numpy()
-            recon_layouts = [train_dataset.render(layout) for layout in layouts]
+            print(layouts)
             for i, layout in enumerate(layouts):
                 layout = train_dataset.render(layout)
                 layout.save(os.path.join(args.dir, f'recon_{i:02d}.png'))
 
-            x_cond[x_cond==eos_token]=pad_token
+            # x_cond[x_cond==eos_token]=pad_token
+            # x_cond = x_cond.squeeze()
+            # x_cond = x_cond[:torch.where(x_cond==eos_token)[0]]
+            # x_cond = x_cond.view(1,-1)
+            x_cond = x_cond[:,:26]
+            print(x_cond)
 
             # samples - random
             layouts = sample(model, x_cond, steps=train_dataset.max_length,
                                 temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
+            print(layouts)
+
             for i, layout in enumerate(layouts):
                 layout = train_dataset.render(layout)
                 layout.save(os.path.join(args.dir, f'sample_random_{i:02d}.png'))
@@ -97,6 +105,8 @@ if __name__ == "__main__":
             
             layouts = sample(model, x_cond, steps=train_dataset.max_length,
                                 temperature=1.0, sample=False, top_k=None).detach().cpu().numpy()
+            print(layouts)
+
             for i, layout in enumerate(layouts):
                 layout = train_dataset.render(layout)
                 layout.save(os.path.join(args.dir, f'sample_det_{i:02d}.png'))
