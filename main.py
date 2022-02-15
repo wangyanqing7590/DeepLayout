@@ -2,7 +2,7 @@ import os
 import argparse
 from tabnanny import check
 import torch
-from sdataset import MNISTLayout, JSONLayout, CSVLayout
+from sdataset import  CSVLayout
 from model import GPT, GPTConfig
 from trainer import Trainer, TrainerConfig
 from utils import set_seed
@@ -14,13 +14,13 @@ if __name__ == "__main__":
     parser.add_argument("--log_dir", default="./logs", help="/path/to/logs/dir")
     parser.add_argument("--ckpt", default=None, help="path to checkpoint")
 
-    # MNIST options
-    parser.add_argument("--data_dir", default=None, help="/path/to/mnist/data")
-    parser.add_argument("--threshold", type=int, default=16, help="threshold for grayscale values")
+    # # MNIST options
+    # parser.add_argument("--data_dir", default=None, help="/path/to/mnist/data")
+    # parser.add_argument("--threshold", type=int, default=16, help="threshold for grayscale values")
 
-    # COCO/PubLayNet options
-    parser.add_argument("--train_json", default=None, help="/path/to/train/json")
-    parser.add_argument("--val_json", default=None, help="/path/to/val/json")
+    # # COCO/PubLayNet options
+    # parser.add_argument("--train_json", default=None, help="/path/to/train/json")
+    # parser.add_argument("--val_json", default=None, help="/path/to/val/json")
 
     # CSV options
     parser.add_argument("--train_csv", default="/Users/wangyanqing/Downloads/data/rico_anno_tiny.csv", help="/path/to/train/json")
@@ -60,18 +60,18 @@ if __name__ == "__main__":
     print(f"using device: {device}")
 
     # MNIST Testing
-    if args.data_dir is not None:
-        train_dataset = MNISTLayout(args.log_dir, train=True, threshold=args.threshold)
-        valid_dataset = MNISTLayout(args.log_dir, train=False, threshold=args.threshold,
-                                    max_length=train_dataset.max_length)
+    # if args.data_dir is not None:
+    #     train_dataset = MNISTLayout(args.log_dir, train=True, threshold=args.threshold)
+    #     valid_dataset = MNISTLayout(args.log_dir, train=False, threshold=args.threshold,
+    #                                 max_length=train_dataset.max_length)
     #CSV 
-    elif args.train_csv is not None:
+    if args.train_csv is not None:
         train_dataset = CSVLayout(args.train_csv)
         valid_dataset = CSVLayout(args.val_csv, max_length=train_dataset.max_length)
     # COCO and PubLayNet
-    else:
-        train_dataset = JSONLayout(args.train_json)
-        valid_dataset = JSONLayout(args.val_json, max_length=train_dataset.max_length)
+    # else:
+    #     train_dataset = JSONLayout(args.train_json)
+    #     valid_dataset = JSONLayout(args.val_json, max_length=train_dataset.max_length)
 
     mconf = GPTConfig(train_dataset.vocab_size, train_dataset.max_length,
                       n_layer=args.n_layer, n_head=args.n_head, n_embd=args.n_embd)  # a GPT-1
