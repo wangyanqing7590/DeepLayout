@@ -204,10 +204,11 @@ class Trainer:
                 wandb.log({
                     "input_layouts": [wandb.Image(pil, caption=f'input_{epoch:02d}_{i:02d}.png')
                                       for i, pil in enumerate(input_layouts)],
-                    "recon_layouts": [wandb.Image(pil, caption=f'recon_{epoch:02d}_{i:02d}.png')
-                                      for i, pil in enumerate(all_layouts)],
+                    
                     # "sample_random_layouts": [wandb.Image(pil, caption=f'sample_random_{epoch:02d}_{i:02d}.png')
                     #                           for i, pil in enumerate(sample_random_layouts)],
-                    "sample_det_layouts": [wandb.Image(pil, caption=f'sample_det_{epoch:02d}_{i:02d}.png')
+                    "com_layouts": [wandb.Image(pil, caption=f'com_{epoch:02d}_{i:02d}.png')
                                            for i, pil in enumerate(sample_det_layouts)],
+                    "gt_layouts": [wandb.Image(pil, caption=f'gt_{epoch:02d}_{i:02d}.png')
+                    for i, pil in enumerate(all_layouts)],
                 }, step=self.iters)
