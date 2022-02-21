@@ -89,11 +89,10 @@ class Trainer:
             pbar = tqdm(enumerate(loader), total=len(loader)) if is_train else enumerate(loader)
             for it, (x, y, all) in pbar:
 
-                if epoch == 0 and not is_train:
-                    fixed = np.random.randint(0,len(x))
-                    self.fixed_x = x[:min(4, len(x))]
-                    self.fixed_y = y[:min(4, len(y))]
-                    self.fixed_all = all[:min(4, len(y))]
+                if not is_train:
+                    self.fixed_x = x[:-min(4, len(x))]
+                    self.fixed_y = y[:-min(4, len(y))]
+                    self.fixed_all = all[:-min(4, len(y))]
 
                 # place data on the correct device
                 x = x.to(self.device)
