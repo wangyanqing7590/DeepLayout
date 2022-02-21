@@ -103,13 +103,14 @@ class CSVLayout(Dataset):
         for i in range(len(layout)):
             x1, y1, x2, y2 = box[i]
             cat = layout[i][0]
-            col = self.colors[cat-self.size] if 0 <= cat-self.size < len(self.colors) else [0, 0, 0]
-            draw.rectangle([x1, y1, x2, y2],
+            if  0 <= cat-self.size < len(self.colors) :
+                # col = self.colors[cat-self.size] if 0 <= cat-self.size < len(self.colors) else [0, 0, 0]
+                col = self.colors[cat-self.size] 
+                draw.rectangle([x1, y1, x2, y2],
                            outline=tuple(col) + (200,),
                            fill=tuple(col) + (64,),
                            width=2)
 
-            if  0 <= cat-self.size < len(self.colors) :
                 font_path = 'font/Lantinghei.ttc'
                 font = ImageFont.truetype(font_path, 40)
                 draw.text((x1+5,y1+5),self.contiguous_category_id_to_csv[cat], tuple(col),font)
