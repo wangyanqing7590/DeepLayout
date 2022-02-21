@@ -4,7 +4,7 @@ from torchvision.datasets.mnist import MNIST
 from torch.utils.data.dataset import Dataset
 from PIL import Image, ImageDraw, ImageOps, ImageFont
 import pandas as pd
-import json
+import random
 
 from utils import trim_tokens, gen_colors
 
@@ -12,17 +12,16 @@ from utils import trim_tokens, gen_colors
 class Padding(object):
     def __init__(self, max_length, vocab_size):
         self.max_length = max_length
-        self.bos_token = vocab_size - 3
+        # self.bos_token = vocab_size - 3
         self.eos_token = vocab_size - 2
         self.pad_token = vocab_size - 1
 
     def __call__(self, layout):
         # grab a chunk of (max_length + 1) from the layout
-
         chunk = torch.zeros(self.max_length+1, dtype=torch.long) + self.pad_token
         # Assume len(item) will always be <= self.max_length:
-        chunk[0] = self.bos_token
-        chunk[1:len(layout)+1] = layout
+        # chunk[0] = self.bos_token
+        chunk[0:len(layout)] = layout
         chunk[len(layout)+1] = self.eos_token
 
         x = chunk[:-1]
@@ -41,7 +40,7 @@ class CSVLayout(Dataset):
     #    'Number Stepper']
         self.categories = ['Icon', 'Text',  'Text Button',
        'Slider', 'Image',
-       'Pager Indicator','Input', 'Date Picker',
+       'Pager Indicator','Input', 
         'On/Off Switch', 'Map View',
        'Video', 'Radio Button', 'Checkbox']
         self.width=1440
@@ -58,8 +57,8 @@ class CSVLayout(Dataset):
             v: k for k, v in self.csv_category_to_contiguous_id.items()
         }
 
-        self.vocab_size = self.size + len(self.categories) + 3  # bos, eos, pad tokens
-        self.bos_token = self.vocab_size - 3
+        self.vocab_size = self.size + len(self.categories) + 2  # bos, eos, pad tokens
+        # self.bos_token = self.vocab_size - 2
         self.eos_token = self.vocab_size - 2
         self.pad_token = self.vocab_size - 1
 
@@ -67,8 +66,8 @@ class CSVLayout(Dataset):
         self.max_item = max_item
         self.max_length = max_length
         if self.max_length is None:
-            self.max_length = min(df.groupby('filename').count().xmin.max(),self.max_item)*5 + 2  # bos, eos tokens
-            self.max_length = self.max_item*5 + 2  # bos, eos tokens
+            # self.max_length = min(df.groupby('filename').count().xmin.max(),self.max_item)*5 + 2  # bos, eos tokens
+            self.max_length = self.max_item*5 + 1  # bos, eos tokens
         self.transform = Padding(self.max_length, self.vocab_size)
 
     def quantize_box(self, boxes, width, height):
@@ -94,7 +93,7 @@ class CSVLayout(Dataset):
         img = Image.new('RGB', (self.width, self.height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img, 'RGBA')
         layout = layout.reshape(-1)
-        layout = trim_tokens(layout, self.bos_token, self.eos_token, self.pad_token)
+        layout = trim_tokens(layout,  self.eos_token, self.pad_token)
         layout = layout[: len(layout) // 5 * 5].reshape(-1, 5)
         box = layout[:, 1:].astype(np.float32)
         box[:, [0, 2]] = box[:, [0, 2]] / (self.size - 1) * (self.width-1)
@@ -121,6 +120,7 @@ class CSVLayout(Dataset):
     def __getitem__(self, idx):
         # grab a chunk of (block_size + 1) tokens from the data
         filename = self.data[idx]
+        # print(filename)
         image = self.df.query(f"filename == '{filename}'")
         ann_box = []
         ann_cat = []
@@ -134,7 +134,7 @@ class CSVLayout(Dataset):
 
         # Sort boxes
         ann_box = np.array(ann_box,dtype=float)
-        ind = np.lexsort((ann_box[:, 0], ann_box[:, 1]))
+        ind = np.argsort(ann_box[:, 2] * ann_box[:, 3], )[::-1]
         ann_box = ann_box[ind]
     
         ann_cat = np.array(ann_cat)
@@ -144,13 +144,33 @@ class CSVLayout(Dataset):
         ann_box = self.quantize_box(ann_box, self.width, self.height)
 
         # Append the categories
-        layout = np.concatenate([ann_cat.reshape(-1, 1), ann_box], axis=1).reshape(-1)
-
+        layout = np.concatenate([ann_cat.reshape(-1, 1), ann_box], axis=1)
         layout = torch.tensor(layout, dtype=torch.long)
-        layout = self.transform(layout)
-        return layout['x'], layout['y']
+        # print(layout)
+        x_num = random.randint(1,len(image))
+        slice = random.sample(list(range(len(image))), x_num)
+        layout_x = torch.zeros(self.max_length, dtype=torch.long) + self.pad_token
+        layout_x[:x_num*5] = layout[slice].view(-1)
+        layout_x[x_num*5] = self.eos_token
+        layout_y = torch.zeros(5, dtype=torch.long) + self.pad_token
+        if x_num == len(image):
+            layout_y = layout_y - (self.pad_token - self.eos_token)
+        else:
+            for i in range(len(image)):
+                if i not in slice:
+                    layout_y = layout[i]
+                    break
+
+        # layout = self.transform(layout)
+        layout_all = torch.zeros(self.max_length, dtype=torch.long) + self.pad_token
+        layout_all[:len(image)*5] = layout.view(-1)
+        layout_all[len(image)*5] = self.eos_token
+        return layout_x, layout_y, layout_all
 
 if __name__ == '__main__':
-    layout_all = CSVLayout('./testfile.csv')
+    layout_all = CSVLayout('testfile5.csv')
     sample_xy = layout_all[0]
-    layout_all.render(np.array(layout_all[0][0])).show()
+    layout_all.render(np.array(sample_xy[0])).show()
+    layout_all.render(np.array(sample_xy[1])).show()
+    layout_all.render(np.array(sample_xy[2])).show()
+    print(sample_xy)

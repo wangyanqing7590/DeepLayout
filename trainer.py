@@ -15,7 +15,7 @@ from torch.nn import functional as F
 
 from torch.utils.data.dataloader import DataLoader
 
-from utils import sample
+from utils import sample, trim_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ class Trainer:
         self.iters = 0
         self.fixed_x = None
         self.fixed_y = None
+        self.fixed_all = None
         print("Using wandb")
         wandb.init(project='LayoutTransformer', name=args.exp)
         wandb.config.update(args)
@@ -86,11 +87,12 @@ class Trainer:
 
             losses = []
             pbar = tqdm(enumerate(loader), total=len(loader)) if is_train else enumerate(loader)
-            for it, (x, y) in pbar:
+            for it, (x, y, all) in pbar:
 
                 if epoch == 0 and not is_train:
                     self.fixed_x = x[:min(4, len(x))]
                     self.fixed_y = y[:min(4, len(y))]
+                    self.fixed_all = all[:min(4, len(y))]
 
                 # place data on the correct device
                 x = x.to(self.device)
@@ -163,28 +165,36 @@ class Trainer:
                 #     layout = self.train_dataset.render(layout)
                 #     layout.save(os.path.join(self.config.samples_dir, f'input_{epoch:02d}_{i:02d}.png'))
 
-                # reconstruction
-                x_cond = self.fixed_x.to(self.device)
-                logits, _ = model(x_cond)
-                probs = F.softmax(logits, dim=-1)
-                _, y = torch.topk(probs, k=1, dim=-1)
-                layouts = torch.cat((x_cond[:, :1], y[:, :, 0]), dim=1).detach().cpu().numpy()
-                recon_layouts = [self.train_dataset.render(layout) for layout in layouts]
+                # all
+                layouts = self.fixed_all.detach().cpu().numpy()
+                all_layouts = [self.train_dataset.render(layout) for layout in layouts]
+                # logits, _ = model(x_cond)
+                # probs = F.softmax(logits, dim=-1)
+                # _, y = torch.topk(probs, k=1, dim=-1)
+                # layouts = torch.cat((x_cond[:, :1], y[:, :, 0]), dim=1).detach().cpu().numpy()
+                # recon_layouts = [self.train_dataset.render(layout) for layout in layouts]
                 # for i, layout in enumerate(layouts):
                 #     layout = self.train_dataset.render(layout)
                 #     layout.save(os.path.join(self.config.samples_dir, f'recon_{epoch:02d}_{i:02d}.png'))
 
                 # samples - random
-                layouts = sample(model, x_cond[:, :6], steps=self.train_dataset.max_length,
-                                 temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
-                sample_random_layouts = [self.train_dataset.render(layout) for layout in layouts]
+                x_cond = self.fixed_x.to(self.device)
+                # layouts = sample(model, x_cond[:, :5], steps=self.train_dataset.max_length,
+                #                  temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
+                # sample_random_layouts = [self.train_dataset.render(layout) for layout in layouts]
                 # for i, layout in enumerate(layouts):
                 #     layout = self.train_dataset.render(layout)
                 #     layout.save(os.path.join(self.config.samples_dir, f'sample_random_{epoch:02d}_{i:02d}.png'))
 
                 # samples - deterministic
-                
-                layouts = sample(model, x_cond[:, :6], steps=self.train_dataset.max_length,
+                xclen = 0
+                for xc in x_cond:
+                    l = len(trim_tokens(xc, self.train_dataset.eos_token, self.train_dataset.pad_token))
+                    if l > xclen:
+                        xclen = l
+
+
+                layouts = sample(model, x_cond[:xclen], steps=self.train_dataset.max_item - xclen//5,
                                  temperature=1.0, sample=False, top_k=None).detach().cpu().numpy()
                 sample_det_layouts = [self.train_dataset.render(layout) for layout in layouts]
                 # for i, layout in enumerate(layouts):
@@ -195,9 +205,9 @@ class Trainer:
                     "input_layouts": [wandb.Image(pil, caption=f'input_{epoch:02d}_{i:02d}.png')
                                       for i, pil in enumerate(input_layouts)],
                     "recon_layouts": [wandb.Image(pil, caption=f'recon_{epoch:02d}_{i:02d}.png')
-                                      for i, pil in enumerate(recon_layouts)],
-                    "sample_random_layouts": [wandb.Image(pil, caption=f'sample_random_{epoch:02d}_{i:02d}.png')
-                                              for i, pil in enumerate(sample_random_layouts)],
+                                      for i, pil in enumerate(all_layouts)],
+                    # "sample_random_layouts": [wandb.Image(pil, caption=f'sample_random_{epoch:02d}_{i:02d}.png')
+                    #                           for i, pil in enumerate(sample_random_layouts)],
                     "sample_det_layouts": [wandb.Image(pil, caption=f'sample_det_{epoch:02d}_{i:02d}.png')
                                            for i, pil in enumerate(sample_det_layouts)],
                 }, step=self.iters)

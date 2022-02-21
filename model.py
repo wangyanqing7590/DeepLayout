@@ -193,10 +193,13 @@ class GPT(nn.Module):
         x = self.blocks(x)
         x = self.ln_f(x)
         logits = self.head(x)
+        logits = logits[:,:5,:]
+        # print(logits.size())
 
         # if we are given some desired targets also callate the loss
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=pad_token)
+            # print(targets)
+            loss = F.cross_entropy(logits.contiguous().view(-1, logits.size(-1)), targets.view(-1), ignore_index=pad_token)
 
         return logits, loss

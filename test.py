@@ -15,10 +15,10 @@ from model import GPT, GPTConfig
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Layout Transformer')
-    parser.add_argument("--ckpt", default='/Users/wangyanqing/Downloads/checkpoint.pth', help="path to checkpoint")
+    parser.add_argument("--ckpt", default='/Users/wangyanqing/Downloads/checkpoint1.pth', help="path to checkpoint")
     parser.add_argument("--dir", default='./outputs', help="path to output")
     parser.add_argument("--train_csv", default="/Users/wangyanqing/Downloads/data/rico_anno_train.csv", help="/path/to/train/csv")
-    parser.add_argument("--val_csv", default="./testfile.csv", help="/path/to/val/csv")
+    parser.add_argument("--val_csv", default="./testfile5.csv", help="/path/to/val/csv")
     # Architecture/training options
     parser.add_argument('--n_layer', default=6, type=int)
     parser.add_argument('--n_embd', default=512, type=int)
@@ -80,7 +80,7 @@ if __name__ == "__main__":
             probs = F.softmax(logits, dim=-1)
             _, y = torch.topk(probs, k=1, dim=-1)
             layouts = torch.cat((x_cond[:, :1], y[:, :, 0]), dim=1).detach().cpu().numpy()
-            print(layouts)
+            print('reconstruction')
             for i, layout in enumerate(layouts):
                 layout = train_dataset.render(layout)
                 layout.save(os.path.join(args.dir, f'recon_{i:02d}.png'))
@@ -89,13 +89,14 @@ if __name__ == "__main__":
             # x_cond = x_cond.squeeze()
             # x_cond = x_cond[:torch.where(x_cond==eos_token)[0]]
             # x_cond = x_cond.view(1,-1)
-            x_cond = x_cond[:,:26]
+            input_items=12
+            x_cond = x_cond[:,:1+5*input_items]
             print(x_cond)
 
             # samples - random
             layouts = sample(model, x_cond, steps=train_dataset.max_length,
                                 temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
-            print(layouts)
+            print('random')
 
             for i, layout in enumerate(layouts):
                 layout = train_dataset.render(layout)
@@ -105,7 +106,7 @@ if __name__ == "__main__":
             
             layouts = sample(model, x_cond, steps=train_dataset.max_length,
                                 temperature=1.0, sample=False, top_k=None).detach().cpu().numpy()
-            print(layouts)
+            print('deterministic')
 
             for i, layout in enumerate(layouts):
                 layout = train_dataset.render(layout)
