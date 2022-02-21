@@ -90,9 +90,9 @@ class Trainer:
             for it, (x, y, all) in pbar:
 
                 if not is_train:
-                    self.fixed_x = x[:-min(4, len(x))]
-                    self.fixed_y = y[:-min(4, len(y))]
-                    self.fixed_all = all[:-min(4, len(y))]
+                    self.fixed_x = x[-min(4, len(x)):]
+                    self.fixed_y = y[-min(4, len(y)):]
+                    self.fixed_all = all[-min(4, len(y)):]
 
                 # place data on the correct device
                 x = x.to(self.device)
