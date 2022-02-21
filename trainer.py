@@ -189,7 +189,7 @@ class Trainer:
                 # samples - deterministic
                 xclen = 0
                 for xc in x_cond:
-                    l = len(trim_tokens(xc, self.train_dataset.eos_token, self.train_dataset.pad_token))
+                    l = len(trim_tokens(xc.cpu(), self.train_dataset.eos_token, self.train_dataset.pad_token))
                     if l > xclen:
                         xclen = l
 
