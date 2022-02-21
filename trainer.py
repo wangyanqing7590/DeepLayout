@@ -165,9 +165,7 @@ class Trainer:
                 #     layout = self.train_dataset.render(layout)
                 #     layout.save(os.path.join(self.config.samples_dir, f'input_{epoch:02d}_{i:02d}.png'))
 
-                # all
-                layouts = self.fixed_all.detach().cpu().numpy()
-                all_layouts = [self.train_dataset.render(layout) for layout in layouts]
+
                 # logits, _ = model(x_cond)
                 # probs = F.softmax(logits, dim=-1)
                 # _, y = torch.topk(probs, k=1, dim=-1)
@@ -178,7 +176,6 @@ class Trainer:
                 #     layout.save(os.path.join(self.config.samples_dir, f'recon_{epoch:02d}_{i:02d}.png'))
 
                 # samples - random
-                x_cond = self.fixed_x.to(self.device)
                 # layouts = sample(model, x_cond[:, :5], steps=self.train_dataset.max_length,
                 #                  temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
                 # sample_random_layouts = [self.train_dataset.render(layout) for layout in layouts]
@@ -187,6 +184,7 @@ class Trainer:
                 #     layout.save(os.path.join(self.config.samples_dir, f'sample_random_{epoch:02d}_{i:02d}.png'))
 
                 # samples - deterministic
+                x_cond = self.fixed_x.to(self.device)
                 xclen = 0
                 for xc in x_cond:
                     l = len(trim_tokens(xc.cpu(), self.train_dataset.eos_token, self.train_dataset.pad_token))
@@ -200,6 +198,9 @@ class Trainer:
                 # for i, layout in enumerate(layouts):
                 #     layout = self.train_dataset.render(layout)
                 #     layout.save(os.path.join(self.config.samples_dir, f'sample_det_{epoch:02d}_{i:02d}.png'))
+                # all
+                layouts = self.fixed_all.detach().cpu().numpy()
+                all_layouts = [self.train_dataset.render(layout) for layout in layouts]
 
                 wandb.log({
                     "input_layouts": [wandb.Image(pil, caption=f'input_{epoch:02d}_{i:02d}.png')
