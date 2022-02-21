@@ -154,7 +154,7 @@ class CSVLayout(Dataset):
         layout_x[x_num*5] = self.eos_token
         layout_y = torch.zeros(5, dtype=torch.long) + self.pad_token
         if x_num == len(image):
-            layout_y = layout_y - (self.pad_token - self.eos_token)
+            layout_y[0] = self.eos_token
         else:
             for i in range(len(image)):
                 if i not in slice:

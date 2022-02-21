@@ -90,6 +90,7 @@ class Trainer:
             for it, (x, y, all) in pbar:
 
                 if epoch == 0 and not is_train:
+                    fixed = np.random.randint(0,len(x))
                     self.fixed_x = x[:min(4, len(x))]
                     self.fixed_y = y[:min(4, len(y))]
                     self.fixed_all = all[:min(4, len(y))]
@@ -159,57 +160,55 @@ class Trainer:
             if self.config.samples_dir is not None and (epoch+1) % self.config.sample_every == 0:
                 # import ipdb; ipdb.set_trace()
                 # inputs
-                layouts = self.fixed_x.detach().cpu().numpy()
-                input_layouts = [self.train_dataset.render(layout) for layout in layouts]
-                # for i, layout in enumerate(layouts):
-                #     layout = self.train_dataset.render(layout)
-                #     layout.save(os.path.join(self.config.samples_dir, f'input_{epoch:02d}_{i:02d}.png'))
+                input_layouts = list()
+                sample_det_layouts = list()
+                all_layouts = list()
+                for i in range(len(self.fixed_x)):
+                    layouts = self.fixed_x[i].detach().cpu().numpy()
+
+                    input_layouts.append(self.train_dataset.render(layouts))
+                    # for i, layout in enumerate(layouts):
+                    #     layout = self.train_dataset.render(layout)
+                    #     layout.save(os.path.join(self.config.samples_dir, f'input_{epoch:02d}_{i:02d}.png'))
 
 
-                # logits, _ = model(x_cond)
-                # probs = F.softmax(logits, dim=-1)
-                # _, y = torch.topk(probs, k=1, dim=-1)
-                # layouts = torch.cat((x_cond[:, :1], y[:, :, 0]), dim=1).detach().cpu().numpy()
-                # recon_layouts = [self.train_dataset.render(layout) for layout in layouts]
-                # for i, layout in enumerate(layouts):
-                #     layout = self.train_dataset.render(layout)
-                #     layout.save(os.path.join(self.config.samples_dir, f'recon_{epoch:02d}_{i:02d}.png'))
+                    # logits, _ = model(x_cond)
+                    # probs = F.softmax(logits, dim=-1)
+                    # _, y = torch.topk(probs, k=1, dim=-1)
+                    # layouts = torch.cat((x_cond[:, :1], y[:, :, 0]), dim=1).detach().cpu().numpy()
+                    # recon_layouts = [self.train_dataset.render(layout) for layout in layouts]
+                    # for i, layout in enumerate(layouts):
+                    #     layout = self.train_dataset.render(layout)
+                    #     layout.save(os.path.join(self.config.samples_dir, f'recon_{epoch:02d}_{i:02d}.png'))
 
-                # samples - random
-                # layouts = sample(model, x_cond[:, :5], steps=self.train_dataset.max_length,
-                #                  temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
-                # sample_random_layouts = [self.train_dataset.render(layout) for layout in layouts]
-                # for i, layout in enumerate(layouts):
-                #     layout = self.train_dataset.render(layout)
-                #     layout.save(os.path.join(self.config.samples_dir, f'sample_random_{epoch:02d}_{i:02d}.png'))
+                    # samples - random
+                    # layouts = sample(model, x_cond[:, :5], steps=self.train_dataset.max_length,
+                    #                  temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
+                    # sample_random_layouts = [self.train_dataset.render(layout) for layout in layouts]
+                    # for i, layout in enumerate(layouts):
+                    #     layout = self.train_dataset.render(layout)
+                    #     layout.save(os.path.join(self.config.samples_dir, f'sample_random_{epoch:02d}_{i:02d}.png'))
 
-                # samples - deterministic
-                x_cond = self.fixed_x.to(self.device)
-                xclen = 0
-                for xc in x_cond:
-                    l = len(trim_tokens(xc.cpu(), self.train_dataset.eos_token, self.train_dataset.pad_token))
-                    if l > xclen:
-                        xclen = l
-
-
-                layouts = sample(model, x_cond[:xclen], steps=self.train_dataset.max_item - xclen//5,
-                                 temperature=1.0, sample=False, top_k=None).detach().cpu().numpy()
-                sample_det_layouts = [self.train_dataset.render(layout) for layout in layouts]
-                # for i, layout in enumerate(layouts):
-                #     layout = self.train_dataset.render(layout)
-                #     layout.save(os.path.join(self.config.samples_dir, f'sample_det_{epoch:02d}_{i:02d}.png'))
-                # all
-                layouts = self.fixed_all.detach().cpu().numpy()
-                all_layouts = [self.train_dataset.render(layout) for layout in layouts]
+                    # samples - deterministic
+                    x_cond = trim_tokens(self.fixed_x[i], self.train_dataset.eos_token, self.train_dataset.pad_token).unsqueeze(0).to(self.device)
+                    layouts = sample(model, x_cond, steps=self.train_dataset.max_item,
+                                    temperature=1.0, sample=False, top_k=None).detach().cpu().numpy()
+                    sample_det_layouts.append(self.train_dataset.render(layouts[0]))
+                    # for i, layout in enumerate(layouts):
+                    #     layout = self.train_dataset.render(layout)
+                    #     layout.save(os.path.join(self.config.samples_dir, f'sample_det_{epoch:02d}_{i:02d}.png'))
+                    # all
+                    layouts = self.fixed_all[i].detach().cpu().numpy()
+                    all_layouts.append(self.train_dataset.render(layouts))
 
                 wandb.log({
                     "input_layouts": [wandb.Image(pil, caption=f'input_{epoch:02d}_{i:02d}.png')
-                                      for i, pil in enumerate(input_layouts)],
+                                    for i, pil in enumerate(input_layouts)],
                     
                     # "sample_random_layouts": [wandb.Image(pil, caption=f'sample_random_{epoch:02d}_{i:02d}.png')
                     #                           for i, pil in enumerate(sample_random_layouts)],
                     "com_layouts": [wandb.Image(pil, caption=f'com_{epoch:02d}_{i:02d}.png')
-                                           for i, pil in enumerate(sample_det_layouts)],
+                                        for i, pil in enumerate(sample_det_layouts)],
                     "gt_layouts": [wandb.Image(pil, caption=f'gt_{epoch:02d}_{i:02d}.png')
                     for i, pil in enumerate(all_layouts)],
                 }, step=self.iters)
