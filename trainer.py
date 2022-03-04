@@ -164,7 +164,7 @@ class Trainer:
                 all_layouts = list()
                 for i in range(len(self.fixed_x)):
                     layouts = self.fixed_x[i].detach().cpu().numpy()
-                    print(layouts)
+                    # print(layouts)
 
                     input_layouts.append(self.train_dataset.render(layouts))
                     # for i, layout in enumerate(layouts):
@@ -195,7 +195,7 @@ class Trainer:
                     probs = F.softmax(logits, dim=-1)
                     _, ix = torch.topk(probs, k=1, dim=-1)
                     layouts = ix.squeeze(-1).detach().cpu().numpy()
-                    print(layouts)
+                    # print(layouts)
 
                     sample_det_layouts.append(self.train_dataset.render(layouts[0]))
                     # for i, layout in enumerate(layouts):
@@ -203,7 +203,7 @@ class Trainer:
                     #     layout.save(os.path.join(self.config.samples_dir, f'sample_det_{epoch:02d}_{i:02d}.png'))
                     # all
                     layouts = self.fixed_y[i].detach().cpu().numpy()
-                    print(layouts)
+                    # print(layouts)
 
                     all_layouts.append(self.train_dataset.render(layouts))
 
