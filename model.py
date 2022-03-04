@@ -57,8 +57,8 @@ class CausalSelfAttention(nn.Module):
         # output projection
         self.proj = nn.Linear(config.n_embd, config.n_embd)
         # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("mask", torch.tril(torch.ones(config.block_size, config.block_size))
-                                     .view(1, 1, config.block_size, config.block_size))
+        # self.register_buffer("mask", torch.tril(torch.ones(config.block_size, config.block_size))
+                                    #  .view(1, 1, config.block_size, config.block_size))
         self.n_head = config.n_head
 
     def forward(self, x, layer_past=None):
@@ -71,7 +71,7 @@ class CausalSelfAttention(nn.Module):
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-        att = att.masked_fill(self.mask[:,:,:T,:T] == 0, float('-inf'))
+        # att = att.masked_fill(self.mask[:,:,:T,:T] == 0, float('-inf'))
         att = F.softmax(att, dim=-1)
         att = self.attn_drop(att)
         y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
