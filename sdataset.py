@@ -135,11 +135,12 @@ class CSVLayout(Dataset):
 
         # Sort boxes
         ann_box = np.array(ann_box,dtype=float)
+        ind = np.lexsort((ann_box[:, 0], ann_box[:, 1]))
         # ind = np.argsort(ann_box[:, 2] * ann_box[:, 3], )[::-1]
-        # ann_box = ann_box[ind]
+        ann_box = ann_box[ind]
     
         ann_cat = np.array(ann_cat)
-        # ann_cat = ann_cat[ind]
+        ann_cat = ann_cat[ind]
 
         # Discretize boxes
         ann_box = self.quantize_box(ann_box, self.width, self.height)
@@ -148,12 +149,12 @@ class CSVLayout(Dataset):
         layout = np.concatenate([ann_cat.reshape(-1, 1), ann_box], axis=1)
         layout = torch.tensor(layout, dtype=torch.long)
         # print(layout)
-        # x_num = random.randint(1,len(image))
-        x_num = max(len(image) -1, 1)
+        x_num = random.randint(1,len(image))
+        # x_num = max(len(image) -1, 1)
         slice = random.sample(list(range(len(image))), x_num)
         layout_x = torch.zeros(self.max_length, dtype=torch.long) + self.pad_token
         layout_x[:x_num*5] = layout[slice].view(-1)
-        layout_x[x_num*5] = self.eos_token
+        # layout_x[x_num*5] = self.eos_token
         layout_y = torch.zeros(5, dtype=torch.long) + self.pad_token
         if x_num == len(image):
             layout_y[0] = self.eos_token
@@ -165,14 +166,20 @@ class CSVLayout(Dataset):
 
         # layout = self.transform(layout)
         layout_all = torch.zeros(self.max_length, dtype=torch.long) + self.pad_token
-        layout_all[:len(image)*5] = layout.view(-1)
+        layout_all[:x_num*5] = layout[slice].view(-1)
+        ids = [False if i in slice else True for i in range(len(image))]
+        layout = layout[ids]
+        
+        if x_num*5 < len(image)*5 :
+            layout_all[x_num*5:len(image)*5] = layout.view(-1)
         layout_all[len(image)*5] = self.eos_token
+        # print(layout_x,layout_all)
         return layout_x, layout_y, layout_all
 
 if __name__ == '__main__':
     layout_all = CSVLayout('testfile5.csv')
     sample_xy = layout_all[0]
     layout_all.render(np.array(sample_xy[0])).show()
-    layout_all.render(np.array(sample_xy[1])).show()
+    # layout_all.render(np.array(sample_xy[1])).show()
     layout_all.render(np.array(sample_xy[2])).show()
     print(sample_xy)

@@ -15,7 +15,7 @@ from model import GPT, GPTConfig
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Layout Transformer')
-    parser.add_argument("--ckpt", default='/Users/wangyanqing/Downloads/checkpoint.pth', help="path to checkpoint")
+    parser.add_argument("--ckpt", default='/Users/wangyanqing/Downloads/checkpoint (1).pth', help="path to checkpoint")
     parser.add_argument("--dir", default='./outputs', help="path to output")
     parser.add_argument("--train_csv", default="/Users/wangyanqing/Downloads/synz-master/data/rico_train.csv", help="/path/to/train/csv")
     parser.add_argument("--val_csv", default="./testfile5.csv", help="/path/to/val/csv")
@@ -69,6 +69,7 @@ if __name__ == "__main__":
             x = x.to(device)
 
             layouts = x.detach().cpu().numpy()
+            print(layouts)
             for i, layout in enumerate(layouts):
                 layout = train_dataset.render(layout)
                 layout.save(os.path.join(args.dir, f'input_{i:02d}.png'))
@@ -103,10 +104,11 @@ if __name__ == "__main__":
             #     layout.save(os.path.join(args.dir, f'sample_random_{i:02d}.png'))
 
             # samples - deterministic
-            x_cond = trim_tokens(x[0], train_dataset.eos_token, train_dataset.pad_token).unsqueeze(0).to(device)
-            layouts = sample(model, x_cond, steps=train_dataset.max_item,
-                                temperature=1.0, sample=False, top_k=None).detach().cpu().numpy()
-            print('deterministic')
+            x_cond = x[i].unsqueeze(0).to(device)
+            logits, _ = model(x_cond)
+            probs = F.softmax(logits, dim=-1)
+            _, ix = torch.topk(probs, k=1, dim=-1)
+            layouts = ix.squeeze(-1).detach().cpu().numpy()
 
             for i, layout in enumerate(layouts):
                 print(layouts)
