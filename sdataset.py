@@ -135,11 +135,11 @@ class CSVLayout(Dataset):
 
         # Sort boxes
         ann_box = np.array(ann_box,dtype=float)
-        ind = np.argsort(ann_box[:, 2] * ann_box[:, 3], )[::-1]
-        ann_box = ann_box[ind]
+        # ind = np.argsort(ann_box[:, 2] * ann_box[:, 3], )[::-1]
+        # ann_box = ann_box[ind]
     
         ann_cat = np.array(ann_cat)
-        ann_cat = ann_cat[ind]
+        # ann_cat = ann_cat[ind]
 
         # Discretize boxes
         ann_box = self.quantize_box(ann_box, self.width, self.height)
@@ -148,7 +148,8 @@ class CSVLayout(Dataset):
         layout = np.concatenate([ann_cat.reshape(-1, 1), ann_box], axis=1)
         layout = torch.tensor(layout, dtype=torch.long)
         # print(layout)
-        x_num = random.randint(1,len(image))
+        # x_num = random.randint(1,len(image))
+        x_num = max(len(image) -1, 1)
         slice = random.sample(list(range(len(image))), x_num)
         layout_x = torch.zeros(self.max_length, dtype=torch.long) + self.pad_token
         layout_x[:x_num*5] = layout[slice].view(-1)

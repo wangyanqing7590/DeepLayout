@@ -7,7 +7,7 @@ from tqdm import tqdm
 import torch
 from torch.nn import functional as F
 from torch.utils.data.dataloader import DataLoader
-from utils import sample
+from utils import sample, trim_tokens
 import argparse
 from sdataset import  CSVLayout
 from model import GPT, GPTConfig
@@ -15,9 +15,9 @@ from model import GPT, GPTConfig
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Layout Transformer')
-    parser.add_argument("--ckpt", default='/Users/wangyanqing/Downloads/checkpoint1.pth', help="path to checkpoint")
+    parser.add_argument("--ckpt", default='/Users/wangyanqing/Downloads/checkpoint.pth', help="path to checkpoint")
     parser.add_argument("--dir", default='./outputs', help="path to output")
-    parser.add_argument("--train_csv", default="/Users/wangyanqing/Downloads/data/rico_anno_train.csv", help="/path/to/train/csv")
+    parser.add_argument("--train_csv", default="/Users/wangyanqing/Downloads/synz-master/data/rico_train.csv", help="/path/to/train/csv")
     parser.add_argument("--val_csv", default="./testfile5.csv", help="/path/to/val/csv")
     # Architecture/training options
     parser.add_argument('--n_layer', default=6, type=int)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
                             num_workers=8)
 
         # pbar = tqdm(enumerate(loader), total=len(loader)) 
-        for x, y in loader:
+        for x, y, all in loader:
 
             # place data on the correct device
             x = x.to(device)
@@ -74,41 +74,42 @@ if __name__ == "__main__":
                 layout.save(os.path.join(args.dir, f'input_{i:02d}.png'))
 
             # reconstruction
-            x_cond = x.to(device)
-            print(x_cond)
-            logits, _ = model(x_cond)
-            probs = F.softmax(logits, dim=-1)
-            _, y = torch.topk(probs, k=1, dim=-1)
-            layouts = torch.cat((x_cond[:, :1], y[:, :, 0]), dim=1).detach().cpu().numpy()
-            print('reconstruction')
-            for i, layout in enumerate(layouts):
-                layout = train_dataset.render(layout)
-                layout.save(os.path.join(args.dir, f'recon_{i:02d}.png'))
+            # x_cond = x.to(device)
+            # print(x_cond)
+            # logits, _ = model(x_cond)
+            # probs = F.softmax(logits, dim=-1)
+            # _, y = torch.topk(probs, k=1, dim=-1)
+            # layouts = torch.cat((x_cond[:, :1], y[:, :, 0]), dim=1).detach().cpu().numpy()
+            # print('reconstruction')
+            # for i, layout in enumerate(layouts):
+            #     layout = train_dataset.render(layout)
+            #     layout.save(os.path.join(args.dir, f'recon_{i:02d}.png'))
 
-            # x_cond[x_cond==eos_token]=pad_token
-            # x_cond = x_cond.squeeze()
-            # x_cond = x_cond[:torch.where(x_cond==eos_token)[0]]
-            # x_cond = x_cond.view(1,-1)
-            input_items=12
-            x_cond = x_cond[:,:1+5*input_items]
-            print(x_cond)
+            # # x_cond[x_cond==eos_token]=pad_token
+            # # x_cond = x_cond.squeeze()
+            # # x_cond = x_cond[:torch.where(x_cond==eos_token)[0]]
+            # # x_cond = x_cond.view(1,-1)
+            # input_items=12
+            # x_cond = x_cond[:,:1+5*input_items]
+            # print(x_cond)
 
             # samples - random
-            layouts = sample(model, x_cond, steps=train_dataset.max_length,
-                                temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
-            print('random')
+            # layouts = sample(model, x.to(device), steps=train_dataset.max_length,
+            #                     temperature=1.0, sample=True, top_k=5).detach().cpu().numpy()
+            # print('random')
 
-            for i, layout in enumerate(layouts):
-                layout = train_dataset.render(layout)
-                layout.save(os.path.join(args.dir, f'sample_random_{i:02d}.png'))
+            # for i, layout in enumerate(layouts):
+            #     layout = train_dataset.render(layout)
+            #     layout.save(os.path.join(args.dir, f'sample_random_{i:02d}.png'))
 
             # samples - deterministic
-            
-            layouts = sample(model, x_cond, steps=train_dataset.max_length,
+            x_cond = trim_tokens(x[0], train_dataset.eos_token, train_dataset.pad_token).unsqueeze(0).to(device)
+            layouts = sample(model, x_cond, steps=train_dataset.max_item,
                                 temperature=1.0, sample=False, top_k=None).detach().cpu().numpy()
             print('deterministic')
 
             for i, layout in enumerate(layouts):
+                print(layouts)
                 layout = train_dataset.render(layout)
                 layout.save(os.path.join(args.dir, f'sample_det_{i:02d}.png'))
 

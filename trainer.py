@@ -87,12 +87,12 @@ class Trainer:
 
             losses = []
             pbar = tqdm(enumerate(loader), total=len(loader)) if is_train else enumerate(loader)
-            for it, (x, y, all) in pbar:
+            for it, (x, old, y) in pbar:
 
                 if not is_train:
                     self.fixed_x = x[-min(4, len(x)):]
                     self.fixed_y = y[-min(4, len(y)):]
-                    self.fixed_all = all[-min(4, len(y)):]
+                    # self.fixed_all = all[-min(4, len(all)):]
 
                 # place data on the correct device
                 x = x.to(self.device)
@@ -189,15 +189,17 @@ class Trainer:
                     #     layout.save(os.path.join(self.config.samples_dir, f'sample_random_{epoch:02d}_{i:02d}.png'))
 
                     # samples - deterministic
-                    x_cond = trim_tokens(self.fixed_x[i], self.train_dataset.eos_token, self.train_dataset.pad_token).unsqueeze(0).to(self.device)
-                    layouts = sample(model, x_cond, steps=self.train_dataset.max_item,
-                                    temperature=1.0, sample=False, top_k=None).detach().cpu().numpy()
+                    x_cond = self.fixed_x[i].unsqueeze(0).to(self.device)
+                    logits, _ = model(x_cond)
+                    probs = F.softmax(logits, dim=-1)
+                    _, ix = torch.topk(probs, k=1, dim=-1)
+                    layouts = ix.squeeze().detach().cpu().numpy()
                     sample_det_layouts.append(self.train_dataset.render(layouts[0]))
                     # for i, layout in enumerate(layouts):
                     #     layout = self.train_dataset.render(layout)
                     #     layout.save(os.path.join(self.config.samples_dir, f'sample_det_{epoch:02d}_{i:02d}.png'))
                     # all
-                    layouts = self.fixed_all[i].detach().cpu().numpy()
+                    layouts = self.fixed_y[i].detach().cpu().numpy()
                     all_layouts.append(self.train_dataset.render(layouts))
 
                 wandb.log({
